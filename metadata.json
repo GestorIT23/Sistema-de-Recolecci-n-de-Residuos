@@ -1,0 +1,6 @@
+{
+  "name": "Biotrash - Recolección Industrial",
+  "description": "Sistema de captura de datos en campo para recolección de desechos industriales peligrosos con generación de PDF y firma digital.",
+  "requestFramePermissions": ["camera", "geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

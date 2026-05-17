@@ -1,0 +1,36 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Helvetica Neue", "Arial", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  
+  --color-brand-dark: #141414;
+  --color-brand-gray: #E4E3E0;
+  --color-brand-orange: #E67E22;
+  --color-brand-green: #1B4D2E;
+}
+
+@layer base {
+  body {
+    @apply font-sans bg-brand-gray text-brand-dark;
+  }
+}
+
+@layer components {
+  .tech-input {
+    @apply w-full border border-brand-dark p-2 text-sm bg-white focus:ring-0 focus:border-brand-orange outline-none transition-all;
+  }
+  
+  .tech-label {
+    @apply text-[10px] font-bold uppercase tracking-widest text-brand-dark/60 mb-1 block;
+  }
+
+  .tech-button {
+    @apply px-4 py-2 border border-brand-dark hover:bg-brand-dark hover:text-white text-xs uppercase tracking-widest font-bold transition-all;
+  }
+
+  .panel-header {
+    @apply p-4 border-b border-brand-dark bg-brand-dark text-white flex justify-between items-center;
+  }
+}
