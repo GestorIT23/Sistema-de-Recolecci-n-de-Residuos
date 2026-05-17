@@ -317,7 +317,7 @@ export default function App() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!photos.check || !photos.etiqueta || !photos.grupo || !signature) {
-      alert('Debe completar todas las fotos y la firma.');
+      alert('Debe completar todas las fotos y la firma antes de enviar.');
       return;
     }
 
@@ -325,7 +325,15 @@ export default function App() {
     setError(null);
 
     try {
+      console.log('--- Iniciando Proceso de Guardado ---');
+      
+      console.log('1. Generando PDF...');
       const pdfBase64 = await generatePDFBase64();
+      if (!pdfBase64) {
+        throw new Error('Fallo crítico: No se pudo generar el contenido visual del PDF.');
+      }
+      console.log('PDF generado exitosamente (Base64 ready)');
+
       const payload = {
         token: API_CONFIG.TOKEN,
         action: 'guardarRegistro',
@@ -333,13 +341,18 @@ export default function App() {
           ...formData,
           ...location,
           precision_m: location.accuracy,
-          fotos: photos,
+          fotos: {
+            check: photos.check,
+            etiqueta: photos.etiqueta,
+            grupo: photos.grupo
+          },
           firma_base64: signature,
           pdf_base64: pdfBase64,
-          usuario_rol: user.label
+          usuario_rol: user?.label || 'Operador'
         }
       };
 
+      console.log('2. Enviando a la API Proxy /api/save...');
       const response = await fetch('/api/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -347,14 +360,25 @@ export default function App() {
       });
       
       const resData = await response.json();
-      if (!response.ok || !resData.success) throw new Error(resData.error || 'Error en servidor');
+      console.log('3. Respuesta recibida:', resData);
+
+      if (!response.ok) {
+        throw new Error(`Error del servidor: ${response.status} ${response.statusText}`);
+      }
+
+      if (!resData.success) {
+        throw new Error(resData.error || 'La API de Google Apps Script devolvió un error desconocido.');
+      }
       
-      alert('Registro guardado exitosamente');
+      alert('¡TRABAJO GUARDADO EXITOSAMENTE!\nLos datos y el PDF están en la hoja de control.');
       setView('dashboard');
       setPhotos({ check: '', etiqueta: '', grupo: '' });
       setSignature('');
+      generateNewIDs();
     } catch (err: any) {
-      setError('Error al enviar datos: ' + err.message);
+      console.error('ERROR EN CAPTURA:', err);
+      setError('ERROR: ' + err.message);
+      alert('FALLO AL GUARDAR:\n' + err.message + '\n\nVerifica la consola para más detalles.');
     } finally {
       setLoading(false);
     }

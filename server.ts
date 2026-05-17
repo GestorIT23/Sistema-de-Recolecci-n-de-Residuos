@@ -11,7 +11,19 @@ async function startServer() {
   // API Proxy to Google Apps Script (to avoid CORS and opaque responses)
   app.post("/api/save", async (req, res) => {
     try {
-      const GAS_URL = process.env.GAS_WEBAPP_URL || 'https://script.google.com/macros/s/AKfycbz_XXXXXXXXXXXX/exec';
+      const GAS_URL = process.env.GAS_WEBAPP_URL;
+      
+      console.log('--- PROXY REQUEST ---');
+      console.log('Target GAS URL:', GAS_URL);
+
+      if (!GAS_URL || GAS_URL === 'https://script.google.com/macros/s/AKfycbz_XXXXXXXXXXXX/exec') {
+        console.error('GAS_WEBAPP_URL is not configured correctly in .env');
+        return res.status(500).json({ 
+          success: false, 
+          error: 'Configuración pendiente: Falta la URL de Google Apps Script (GAS_WEBAPP_URL).' 
+        });
+      }
+
       const response = await fetch(GAS_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -19,10 +31,14 @@ async function startServer() {
       });
       
       const result = await response.json();
+      console.log('GAS Response Success:', result.success);
       res.json(result);
     } catch (error: any) {
-      console.error('Proxy Error:', error);
-      res.status(500).json({ success: false, error: error.message });
+      console.error('Proxy Error Detail:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: 'Error de conexión con Google: ' + error.message 
+      });
     }
   });
 
