@@ -238,12 +238,21 @@ export default function App() {
     }
   };
 
-  const startCapture = () => {
-    setFormData({
-      ...formData,
+  const generateNewIDs = () => {
+    setFormData(prev => ({
+      ...prev,
       no_reg: generateNoReg(),
       no_tonel: generateNoTonel(),
-    });
+      nombre_cliente: '',
+      producto_componente: '',
+      anomalias_obs: '',
+      porc_vol_aprox: 0,
+      galones_aprox: ''
+    }));
+  };
+
+  const startCapture = () => {
+    generateNewIDs();
     setView('capture');
   };
 
@@ -337,9 +346,12 @@ export default function App() {
       const payload = {
         token: API_CONFIG.TOKEN,
         action: 'guardarRegistro',
+        driveFolderId: '169xhiKRk2sZ7SJLrzc4lROU40SDolKqJ',
         registro: {
           ...formData,
-          ...location,
+          latitud: location.lat,
+          longitud: location.lng,
+          altitud: location.alt,
           precision_m: location.accuracy,
           fotos: {
             check: photos.check,
@@ -577,11 +589,12 @@ export default function App() {
                   </div>
 
                   <div className="space-y-1">
-                    <label className="tech-label">Producto / Componente *</label>
+                    <label className="tech-label">PRODUCTO *</label>
                     <input 
                       required
                       type="text" 
                       className="tech-input text-brand-dark"
+                      placeholder="Ej. Aceite usado, Baterías, etc."
                       value={formData.producto_componente}
                       onChange={(e) => setFormData({...formData, producto_componente: e.target.value})}
                     />

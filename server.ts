@@ -11,16 +11,16 @@ async function startServer() {
   // API Proxy to Google Apps Script (to avoid CORS and opaque responses)
   app.post("/api/save", async (req, res) => {
     try {
-      const GAS_URL = process.env.GAS_WEBAPP_URL;
+      const GAS_URL = process.env.GAS_WEBAPP_URL || 'https://script.google.com/macros/s/AKfycbz6CPN7aKtMQPUuLhhGKEaaM7sikV7WF7VhqmNOTVTMa5IYP3wai5N_U_Gc2cfLcLNo3A/exec';
       
       console.log('--- PROXY REQUEST ---');
       console.log('Target GAS URL:', GAS_URL);
 
-      if (!GAS_URL || GAS_URL === 'https://script.google.com/macros/s/AKfycbz_XXXXXXXXXXXX/exec') {
-        console.error('GAS_WEBAPP_URL is not configured correctly in .env');
+      if (!GAS_URL || GAS_URL.includes('AKfycbz_XXXXXXXXXXXX')) {
+        console.error('GAS_WEBAPP_URL is not configured correctly');
         return res.status(500).json({ 
           success: false, 
-          error: 'Configuración pendiente: Falta la URL de Google Apps Script (GAS_WEBAPP_URL).' 
+          error: 'Configuración pendiente: Falta la URL de Google Apps Script válida.' 
         });
       }
 
