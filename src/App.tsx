@@ -47,7 +47,7 @@ const ROLES = {
   }
 };
 
-const LOGO_URL = 'https://drive.google.com/uc?export=view&id=1qHSIj7ONXw5S8j246GXZA2_fk46H3VGW';
+const LOGO_URL = 'https://lh3.googleusercontent.com/d/1qHSIj7ONXw5S8j246GXZA2_fk46H3VGW';
 
 // --- TYPES ---
 interface LocationData {
@@ -338,10 +338,10 @@ export default function App() {
           animate={{ opacity: 1, scale: 1 }}
           className="w-full max-w-md bg-white border-2 border-brand-dark shadow-2xl overflow-hidden"
         >
-          <div className="bg-brand-dark p-8 border-b-2 border-brand-dark text-center">
-            <div className="w-12 h-12 bg-brand-orange mx-auto mb-4 flex items-center justify-center font-bold text-2xl text-white">☣</div>
-            <h1 className="text-white text-lg font-bold tracking-tighter uppercase">SISTEMA DE CONTROL HAZMAT</h1>
-            <p className="text-[10px] text-white/50 font-mono uppercase tracking-widest">Captura de Campo v2.0.4</p>
+          <div className="bg-brand-gray/50 p-8 border-b-2 border-brand-dark text-center">
+            <img src={LOGO_URL} alt="Biotrash" className="h-20 mx-auto mb-4 object-contain" />
+            <h1 className="text-brand-dark text-lg font-bold tracking-tighter uppercase">SISTEMA DE CONTROL BIOTRASH</h1>
+            <p className="text-[10px] text-brand-dark/50 font-mono uppercase tracking-widest">Captura de Campo v2.0.4</p>
           </div>
           
           <form onSubmit={handleLogin} className="p-8 space-y-6">
@@ -372,7 +372,7 @@ export default function App() {
             )}
             <button 
               type="submit"
-              className="w-full py-4 bg-brand-dark text-white font-bold text-xs uppercase tracking-widest hover:bg-brand-orange transition-colors"
+              className="w-full py-4 bg-brand-green text-white font-bold text-xs uppercase tracking-widest hover:bg-brand-blue transition-colors"
             >
               Autenticar Servicio
             </button>
@@ -385,22 +385,27 @@ export default function App() {
   return (
     <div className="min-h-screen h-screen flex flex-col bg-brand-gray border-[12px] border-brand-dark overflow-hidden select-none">
       {/* HEADER BAR */}
-      <header className="flex justify-between items-center bg-brand-dark text-white px-6 py-3 shrink-0">
+      <header className="flex justify-between items-center bg-white border-b border-brand-dark px-6 py-3 shrink-0">
         <div className="flex items-center space-x-4">
-          <div className="w-10 h-10 bg-brand-orange flex items-center justify-center font-bold text-xl cursor-pointer" onClick={() => setView('dashboard')}>☣</div>
+          <img 
+            src={LOGO_URL} 
+            alt="Biotrash" 
+            className="h-10 cursor-pointer object-contain" 
+            onClick={() => setView('dashboard')} 
+          />
           <div className="leading-none">
-            <h1 className="text-lg font-bold tracking-tighter">SISTEMA DE CONTROL HAZMAT</h1>
-            <p className="text-[10px] opacity-60 font-mono uppercase tracking-widest">Instancia Biotrash - Captura v2.0.4</p>
+            <h1 className="text-lg font-bold tracking-tighter text-brand-dark">BIOTRASH CONTROL</h1>
+            <p className="text-[10px] text-brand-dark/60 font-mono uppercase tracking-widest">Instancia Biotrash - Captura v2.0.4</p>
           </div>
         </div>
         <div className="flex items-center space-x-6 text-right">
           <div className="hidden md:block leading-none">
-            <p className="text-[10px] uppercase opacity-50 mb-1">Sesión Activa</p>
-            <p className="text-xs font-mono">{user?.user} [{user?.label.toUpperCase()}]</p>
+            <p className="text-[10px] uppercase text-brand-dark/50 mb-1">Sesión Activa</p>
+            <p className="text-xs font-mono text-brand-dark">{user?.user} [{user?.label.toUpperCase()}]</p>
           </div>
           <button 
             onClick={logout}
-            className="px-4 py-2 border border-white/20 hover:bg-white/10 text-[10px] uppercase tracking-widest font-bold transition-all"
+            className="px-4 py-2 border border-brand-dark hover:bg-brand-dark hover:text-white text-[10px] uppercase tracking-widest font-bold transition-all text-brand-dark"
           >
             Cerrar Sesión
           </button>
@@ -444,11 +449,11 @@ export default function App() {
                 </div>
               </div>
               
-              <div className="hidden md:flex flex-col bg-brand-dark/5 p-12 items-center justify-center text-center">
+              <div className="hidden md:flex flex-col bg-brand-gray/20 p-12 items-center justify-center text-center">
                 <div className="p-8 border border-brand-dark border-dashed opacity-30 select-none">
-                  <h3 className="text-6xl font-mono grayscale">☣</h3>
-                  <p className="text-xs font-mono mt-4 uppercase">ENLACE SEGURO BIOTRASH</p>
-                  <p className="text-[8px] font-mono mt-1 opacity-50">TXID: {Math.random().toString(16).substring(2, 12)}</p>
+                  <img src={LOGO_URL} alt="Logo Background" className="h-24 grayscale opacity-30" />
+                  <p className="text-xs font-mono mt-4 uppercase text-brand-dark">ENLACE SEGURO BIOTRASH</p>
+                  <p className="text-[8px] font-mono mt-1 opacity-50 text-brand-dark">TXID: {Math.random().toString(16).substring(2, 12)}</p>
                 </div>
               </div>
             </motion.div>
@@ -688,15 +693,15 @@ export default function App() {
         </div>
         <div className="flex space-x-3">
           {view === 'capture' && (
-            <button 
-              form="capture-form"
-              type="submit"
-              disabled={loading}
-              className="px-6 py-2 bg-white text-brand-dark font-bold text-xs uppercase tracking-tighter hover:bg-brand-orange hover:text-white transition-colors flex items-center gap-2"
-            >
-              {loading ? <Loader2 className="w-3 h-3 animate-spin"/> : <CheckCircle2 className="w-3 h-3"/>}
-              PDF Y SINCRONIZAR
-            </button>
+              <button 
+                form="capture-form"
+                type="submit"
+                disabled={loading}
+                className="px-6 py-2 bg-brand-green text-white font-bold text-xs uppercase tracking-tighter hover:bg-brand-blue transition-colors flex items-center gap-2"
+              >
+                {loading ? <Loader2 className="w-3 h-3 animate-spin"/> : <CheckCircle2 className="w-3 h-3"/>}
+                PDF Y SINCRONIZAR
+              </button>
           )}
         </div>
       </footer>
@@ -707,23 +712,23 @@ export default function App() {
         style={{ display: 'none', width: '800px', padding: '40px', backgroundColor: '#fff', color: '#000', fontFamily: 'Arial, sans-serif' }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-          <div style={{ padding: '10px', backgroundColor: '#141414', color: '#fff', fontWeight: 'bold', fontSize: '24px' }}>BIT</div>
+          <img src={LOGO_URL} alt="Biotrash Logo" style={{ height: '60px', objectFit: 'contain' }} />
           <div style={{ textAlign: 'right' }}>
-            <h1 style={{ margin: 0, color: '#1B4D2E', fontSize: '24px' }}>ACTA DE RECOLECCIÓN</h1>
+            <h1 style={{ margin: 0, color: '#8CC63F', fontSize: '24px' }}>ACTA DE RECOLECCIÓN</h1>
             <p style={{ margin: 0, fontWeight: 'bold' }}>CERT: #{formData.no_reg}</p>
             <p style={{ margin: 0, fontSize: '10px', color: '#666' }}>{new Date().toLocaleString()}</p>
           </div>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '30px' }}>
-          <div style={{ border: '1px solid #141414', padding: '15px' }}>
-            <h3 style={{ backgroundColor: '#141414', color: '#fff', padding: '5px 10px', marginTop: 0, fontSize: '12px' }}>DATOS DEL CLIENTE</h3>
+          <div style={{ border: '1px solid #8CC63F', padding: '15px' }}>
+            <h3 style={{ backgroundColor: '#8CC63F', color: '#fff', padding: '5px 10px', marginTop: 0, fontSize: '12px' }}>DATOS DEL CLIENTE</h3>
             <p style={{ fontSize: '12px' }}><strong>CLIENTE:</strong> {formData.nombre_cliente}</p>
             <p style={{ fontSize: '12px' }}><strong>NO. TONEL:</strong> {formData.no_tonel}</p>
             <p style={{ fontSize: '12px' }}><strong>GRUPO:</strong> {formData.grupo}</p>
           </div>
-          <div style={{ border: '1px solid #141414', padding: '15px' }}>
-            <h3 style={{ backgroundColor: '#141414', color: '#fff', padding: '5px 10px', marginTop: 0, fontSize: '12px' }}>DETALLE TÉCNICO</h3>
+          <div style={{ border: '1px solid #8CC63F', padding: '15px' }}>
+            <h3 style={{ backgroundColor: '#8CC63F', color: '#fff', padding: '5px 10px', marginTop: 0, fontSize: '12px' }}>DETALLE TÉCNICO</h3>
             <p style={{ fontSize: '12px' }}><strong>PRODUCTO:</strong> {formData.producto_componente}</p>
             <p style={{ fontSize: '12px' }}><strong>ESTADO:</strong> {formData.estado_recipiente}</p>
             <p style={{ fontSize: '12px' }}><strong>PROCESO:</strong> {formData.proceso_disposicion}</p>
@@ -732,7 +737,7 @@ export default function App() {
         </div>
 
         <div style={{ marginBottom: '30px' }}>
-           <h3 style={{ borderBottom: '2px solid #141414', paddingBottom: '5px', fontSize: '12px' }}>EVIDENCIA FOTOGRÁFICA</h3>
+           <h3 style={{ borderBottom: '2px solid #8CC63F', paddingBottom: '5px', fontSize: '12px', color: '#0071BC' }}>EVIDENCIA FOTOGRÁFICA</h3>
            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
               {photos.check && <div style={{ border: '1px solid #141414', padding: '2px' }}><img src={photos.check} style={{ width: '100%' }} /><p style={{ fontSize: '8px', textAlign: 'center', margin: '2px' }}>VISTO BUENO</p></div>}
               {photos.etiqueta && <div style={{ border: '1px solid #141414', padding: '2px' }}><img src={photos.etiqueta} style={{ width: '100%' }} /><p style={{ fontSize: '8px', textAlign: 'center', margin: '2px' }}>ETIQUETA</p></div>}
@@ -741,14 +746,14 @@ export default function App() {
         </div>
 
         <div style={{ marginBottom: '30px' }}>
-          <h3 style={{ borderBottom: '2px solid #141414', paddingBottom: '5px', fontSize: '12px' }}>OBSERVACIONES DEL OPERADOR</h3>
+          <h3 style={{ borderBottom: '2px solid #8CC63F', paddingBottom: '5px', fontSize: '12px', color: '#0071BC' }}>OBSERVACIONES DEL OPERADOR</h3>
           <p style={{ minHeight: '60px', border: '1px solid #eee', padding: '10px', fontSize: '11px', fontStyle: 'italic' }}>{formData.anomalias_obs || 'N/A'}</p>
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '50px' }}>
           <div style={{ textAlign: 'center' }}>
-             {signature && <img src={signature} style={{ width: '180px', borderBottom: '2px solid #141414' }} />}
-             <p style={{ margin: 0, fontWeight: 'bold', fontSize: '12px' }}>{user?.user.toUpperCase()}</p>
+             {signature && <img src={signature} style={{ width: '180px', borderBottom: '2px solid #0071BC' }} />}
+             <p style={{ margin: 0, fontWeight: 'bold', fontSize: '12px', color: '#0071BC' }}>{user?.user.toUpperCase()}</p>
              <p style={{ margin: 0, fontSize: '9px', opacity: 0.6 }}>Firma del Operador</p>
           </div>
           <div style={{ textAlign: 'right' }}>

@@ -8,7 +8,8 @@
   --color-brand-dark: #141414;
   --color-brand-gray: #E4E3E0;
   --color-brand-orange: #E67E22;
-  --color-brand-green: #1B4D2E;
+  --color-brand-green: #8CC63F;
+  --color-brand-blue: #0071BC;
 }
 
 @layer base {
