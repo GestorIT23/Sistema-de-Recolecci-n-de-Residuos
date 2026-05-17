@@ -47,7 +47,7 @@ const ROLES = {
   }
 };
 
-const LOGO_URL = 'https://lh3.googleusercontent.com/d/1qHSIj7ONXw5S8j246GXZA2_fk46H3VGW';
+const LOGO_URL = 'https://drive.google.com/thumbnail?id=1qHSIj7ONXw5S8j246GXZA2_fk46H3VGW&sz=w1000';
 
 // --- TYPES ---
 interface LocationData {
@@ -247,14 +247,50 @@ export default function App() {
     setView('capture');
   };
 
+  const compressImage = (file: File, maxWidth = 1200, quality = 0.7): Promise<string> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+
+          if (width > maxWidth) {
+            height = (height * maxWidth) / width;
+            width = maxWidth;
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+      };
+    });
+  };
+
   const handlePhotoUpload = async (key: keyof typeof photos, file: File | null) => {
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) {
-      alert('La imagen no debe superar los 2MB');
+    if (file.size > 20 * 1024 * 1024) {
+      alert('La imagen es demasiado pesada (Máximo 20MB)');
       return;
     }
-    const b64 = await toBase64(file);
-    setPhotos(prev => ({ ...prev, [key]: b64 }));
+    setLoading(true);
+    try {
+      // Compress to avoid massive payloads while allowing high-ish quality
+      const b64 = await compressImage(file);
+      setPhotos(prev => ({ ...prev, [key]: b64 }));
+    } catch (err) {
+      console.error('Error processing image:', err);
+      alert('Error al procesar la imagen');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const generatePDFBase64 = async () => {
@@ -304,12 +340,14 @@ export default function App() {
         }
       };
 
-      await fetch(API_CONFIG.URL, {
+      const response = await fetch('/api/save', {
         method: 'POST',
-        mode: 'no-cors',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
+      
+      const resData = await response.json();
+      if (!response.ok || !resData.success) throw new Error(resData.error || 'Error en servidor');
       
       alert('Registro guardado exitosamente');
       setView('dashboard');
@@ -689,7 +727,7 @@ export default function App() {
               {location.lat ? `GPS: ${location.lat.toFixed(4)}, ${location.lng?.toFixed(4)} | Precisión: ${location.accuracy?.toFixed(1)}m` : 'SENSOR GPS: BUSCANDO SEÑAL...'}
             </p>
           </div>
-          <p className="text-[9px] font-mono opacity-40 uppercase hidden sm:block">ENDPOINT: GOOGLE_DRIVE_SHEETS_v4</p>
+          <p className="text-[9px] font-mono opacity-40 uppercase hidden sm:block">CONEXIÓN: GOOGLE_CLOUD_VITE_v6</p>
         </div>
         <div className="flex space-x-3">
           {view === 'capture' && (
