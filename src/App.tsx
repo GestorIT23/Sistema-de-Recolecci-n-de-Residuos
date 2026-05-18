@@ -456,6 +456,7 @@ export default function App() {
         let msg = `Error del servidor (${status})`;
         if (errorData.error) msg += `: ${errorData.error}`;
         if (errorData.details) msg += `\nDetalles: ${errorData.details}`;
+        if (errorData.rawBody) msg += `\nRespuesta Google: ${errorData.rawBody.substring(0, 200)}`;
         if (errorData.duration) msg += `\nDuración: ${errorData.duration}ms`;
         
         throw new Error(msg);

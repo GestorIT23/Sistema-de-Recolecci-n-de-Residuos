@@ -7,31 +7,35 @@ router.get("/logo-proxy", async (req, res) => {
   const fallbackUrls = [
     'https://i.ibb.co/vzrQ6vW/logo-biotrash.png',
     'https://i.postimg.cc/mD8D9h6V/logo-biotrash.png',
-    'https://drive.google.com/thumbnail?id=1qHSIj7ONXw5S8j246GXZA2_fk46H3VGW&sz=w1000'
+    'https://biotrash.net/wp-content/uploads/2021/04/logo-biotrash.png'
   ];
   
-  const errors: string[] = [];
+  const diagnostic: any[] = [];
   for (const url of fallbackUrls) {
     try {
       const controller = new AbortController();
-      const id = setTimeout(() => controller.abort(), 4000);
-      const response = await fetch(url, { signal: controller.signal });
+      const id = setTimeout(() => controller.abort(), 5000);
+      const response = await fetch(url, { 
+        signal: controller.signal,
+        headers: { 'User-Agent': 'Mozilla/5.0' }
+      });
       clearTimeout(id);
 
       if (response.ok) {
         const buffer = await response.arrayBuffer();
         res.set("Content-Type", "image/png");
         res.set("Cache-Control", "public, max-age=86400");
+        res.set("Access-Control-Allow-Origin", "*");
         return res.send(Buffer.from(buffer));
       } else {
-        errors.push(`${url}: status ${response.status}`);
+        diagnostic.push({ url, status: response.status });
       }
     } catch (error: any) {
-      errors.push(`${url}: ${error.message}`);
+      diagnostic.push({ url, error: error.message });
     }
   }
-  console.error('Logo Proxy failure:', errors);
-  res.status(502).json({ error: 'Logo not found', details: errors });
+  console.error('Logo Proxy failure:', diagnostic);
+  res.status(502).json({ error: 'Logo not found', diagnostic });
 });
 
 // Health check
@@ -43,7 +47,7 @@ router.get("/health", (req, res) => {
 router.post("/save", async (req, res) => {
   const startTime = Date.now();
   try {
-    const GAS_URL = process.env.GAS_WEBAPP_URL || 'https://script.google.com/macros/s/AKfycby41-qUvWKpTSh2AzPHRtcCggDNINs8LGSbUJ4zdo-Z4KkM-tWPjzN_gML9GnUHjUXFgQ/exec';
+    const GAS_URL = process.env.GAS_WEBAPP_URL || 'https://script.google.com/macros/s/AKfycbwk1Mt8CXpH1BhgTIbXsD6ikH_9B0c2swZlHC2qbDL2kkB8waU0Jo4eJT4cXJ0yvJOoNw/exec';
     
     let finalUrl = GAS_URL;
     if (!GAS_URL || GAS_URL.includes('AKfycbz_XXXXXXXXXXXX')) {
@@ -66,7 +70,8 @@ router.post("/save", async (req, res) => {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'User-Agent': 'Mozilla/5.0 (Vercel Serverless)'
         },
         body: bodyStr,
         redirect: 'follow',
@@ -80,21 +85,23 @@ router.post("/save", async (req, res) => {
       
       console.log(`GAS Response: ${status} in ${duration}ms, body length: ${responseText.length}`);
 
-      if (!response.ok && status !== 302) {
+      if (!response.ok && status !== 302 && status !== 301) {
         return res.status(status).json({
           success: false,
-          error: `Google returned status ${status}`,
-          details: responseText.substring(0, 100),
-          duration
+          error: `Google returned error status ${status}`,
+          details: responseText.substring(0, 500) || 'No response body',
+          duration,
+          headers: Object.fromEntries(response.headers.entries())
         });
       }
 
-      if (!responseText) {
+      if (!responseText || responseText.trim() === '') {
         return res.status(502).json({
           success: false,
-          error: 'Empty response from Google',
+          error: 'Google returned an empty response. Ensure the GAS script uses ContentService to return data.',
           status,
-          duration
+          duration,
+          headers: Object.fromEntries(response.headers.entries())
         });
       }
 
@@ -102,11 +109,19 @@ router.post("/save", async (req, res) => {
         const result = JSON.parse(responseText);
         res.json(result);
       } catch (e) {
+        // If it's not JSON, it might be an HTML error page from Google
+        let errorMessage = 'Invalid JSON from Google';
+        if (responseText.includes('google-signin') || responseText.includes('login')) {
+          errorMessage = 'Google Apps Script requires authentication. Ensure it is deployed as "Anyone".';
+        } else if (responseText.includes('script-error')) {
+          errorMessage = 'Google Apps Script encountered a script error.';
+        }
+
         res.status(502).json({ 
           success: false, 
-          error: 'Invalid JSON from Google', 
+          error: errorMessage, 
           status,
-          details: responseText.substring(0, 100),
+          rawBody: responseText.substring(0, 1000), // Give more info
           duration
         });
       }
