@@ -1,5 +1,4 @@
 import express from "express";
-import { Buffer } from "node:buffer";
 
 const router = express.Router();
 
@@ -45,24 +44,19 @@ router.post("/save", async (req, res) => {
       return res.status(413).json({ success: false, error: 'Payload size exceeds 4.5MB limit.' });
     }
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 20000); // Increased significantly to avoid early cuts
-
+    // Simple fetch without AbortController for debugging 500
     try {
       log(`Forwarding to Google: ${finalUrl.substring(0, 60)}...`);
       const response = await fetch(finalUrl, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'User-Agent': 'Mozilla/5.0 (AI-Studio-Proxy)'
+          'Accept': 'application/json'
         },
         body: bodyStr,
-        redirect: 'follow',
-        signal: controller.signal
+        redirect: 'follow'
       });
       
-      clearTimeout(timeoutId);
       const status = response.status;
       const responseText = await response.text();
       const duration = Date.now() - startTime;
@@ -117,12 +111,8 @@ router.post("/save", async (req, res) => {
         });
       }
     } catch (fetchError: any) {
-      clearTimeout(timeoutId);
       const duration = Date.now() - startTime;
       log(`FETCH ERROR after ${duration}ms: ${fetchError.message}`);
-      if (fetchError.name === 'AbortError') {
-        return res.status(504).json({ success: false, error: 'TIMEOUT_PROXIED_GAS_20S', duration });
-      }
       return res.status(500).json({ success: false, error: 'Network Error: ' + fetchError.message, duration });
     }
   } catch (error: any) {
