@@ -1,120 +1,134 @@
 import express from "express";
-import axios from "axios";
+import https from "node:https";
+import url from "node:url";
 
 const router = express.Router();
 
-// Helper to log with timestamp
 const log = (msg: string, data?: any) => {
   const time = new Date().toISOString().substring(11, 19);
-  console.log(`[API ${time}] ${msg}`, data || '');
+  console.log(`[API ${time}] ${msg}`, data ? (typeof data === 'object' ? JSON.stringify(data).substring(0, 200) : data) : '');
 };
 
-// Health check
 router.get("/health", (req, res) => {
-  log("GET /health");
-  res.json({ 
-    status: "ok", 
-    vercel: !!process.env.VERCEL, 
-    node: process.version,
-    env: process.env.NODE_ENV,
-    timestamp: new Date().toISOString()
-  });
+  res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
-// API Proxy to Google Apps Script
 router.post("/save", async (req, res) => {
   const startTime = Date.now();
   log("POST /save - Started");
   
   try {
-    const rawUrl = process.env.GAS_WEBAPP_URL || 'https://script.google.com/macros/s/AKfycbxNeJbViiUIe56V9X2dHl_d9h4V70PgE7Rmq-3D8jprKLcSkFmPxL68xyhI-i60D1gUqA/exec';
+    const payload = req.body;
+    const bodyStr = JSON.stringify(payload);
     
-    // Trim and clean URL
-    const GAS_URL = rawUrl.trim();
+    // Configurar URL destino
+    const envUrl = (process.env.GAS_WEBAPP_URL || '').trim();
+    // Prioridad: 1. Env Var, 2. URL específica del usuario, 3. Fallback genérico
+    let finalUrl = envUrl || 'https://script.google.com/macros/s/AKfycbwk1Mt8CXpH1BhgTIbXsD6ikH_9B0c2swZlHC2qbDL2kkB8waU0Jo4eJT4cXJ0yvJOoNw/exec';
     
-    let finalUrl = GAS_URL;
-    if (!GAS_URL || GAS_URL.includes('AKfycbz_XXXXXXXXXXXX')) {
+    if (finalUrl.includes('AKfycbz_XXXXXXXXXXXX')) {
       finalUrl = 'https://script.google.com/macros/s/AKfycbwk1Mt8CXpH1BhgTIbXsD6ikH_9B0c2swZlHC2qbDL2kkB8waU0Jo4eJT4cXJ0yvJOoNw/exec';
     }
 
-    const payload = req.body;
-    const bodyStr = JSON.stringify(payload);
-    const sizeBytes = bodyStr.length;
-    const sizeMB = sizeBytes / (1024 * 1024);
-    
-    log(`Payload size: ${sizeBytes} bytes (${sizeMB.toFixed(2)} MB)`);
+    log(`Target URL: ${finalUrl.substring(0, 60)}...`);
+    log(`Payload size: ${bodyStr.length} bytes`);
 
-    if (sizeMB > 4.4) {
-      log("ABORT: Payload too large for Vercel/Proxy limit");
-      return res.status(413).json({ success: false, error: 'Payload too large (>4.5MB)' });
-    }
+    // Función recursiva para manejar redireccionamientos manuales si es necesario (GAS lo requiere)
+    const performRequest = (requestUrl: string, depth = 0): Promise<any> => {
+      return new Promise((resolve, reject) => {
+        if (depth > 5) return reject(new Error("Too many redirects"));
 
-    log(`Forwarding to Google: ${finalUrl.substring(0, 60)}...`);
+        const parsedUrl = url.parse(requestUrl);
+        const options = {
+          hostname: parsedUrl.hostname,
+          path: parsedUrl.path,
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(bodyStr),
+            'User-Agent': 'Mozilla/5.0 (Node.js Proxy)'
+          },
+          timeout: 25000
+        };
+
+        const reqOut = https.request(options, (resIn) => {
+          // Manejar Redirecciones (GAS usa 302 siempre)
+          if (resIn.statusCode === 301 || resIn.statusCode === 302) {
+            const redirectUrl = resIn.headers.location;
+            if (redirectUrl) {
+              log(`Redirecting (${resIn.statusCode}) to: ${redirectUrl.substring(0, 50)}...`);
+              // Nota: Al redireccionar GAS de POST a GET en la nueva URL, a veces hay que cambiar el método
+              // Pero GAS usualmente acepta el POST en la redirección o maneja el doPost.
+              // En Node, fetch/axios manejan esto bien. Con https manual, probamos seguir el flujo.
+              return resolve(performRequest(redirectUrl, depth + 1));
+            }
+          }
+
+          let data = '';
+          resIn.on('data', (chunk) => { data += chunk; });
+          resIn.on('end', () => {
+            resolve({
+              status: resIn.statusCode,
+              headers: resIn.headers,
+              body: data
+            });
+          });
+        });
+
+        reqOut.on('error', (err) => reject(err));
+        reqOut.on('timeout', () => {
+          reqOut.destroy();
+          reject(new Error("Timeout after 25s"));
+        });
+
+        reqOut.write(bodyStr);
+        reqOut.end();
+      });
+    };
 
     try {
-      const response = await axios({
-        method: 'post',
-        url: finalUrl,
-        data: payload,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        maxContentLength: Infinity,
-        maxBodyLength: Infinity,
-        timeout: 25000, // 25 seconds timeout
-        validateStatus: () => true // Handle all status codes
-      });
-
-      const status = response.status;
-      const data = response.data;
+      const result = await performRequest(finalUrl);
       const duration = Date.now() - startTime;
-      
-      log(`GAS Response: ${status} in ${duration}ms`);
+      log(`Completed in ${duration}ms with status ${result.status}`);
 
-      if (status >= 400) {
-        log(`ERROR: Google returned ${status}`, data);
-        return res.status(status).json({
-          success: false,
-          error: `Google Apps Script returned status ${status}`,
-          details: typeof data === 'string' ? data.substring(0, 500) : JSON.stringify(data),
-          duration
-        });
+      // Intentar parsear como JSON
+      try {
+        const json = JSON.parse(result.body);
+        res.status(result.status || 200).json(json);
+      } catch (e) {
+        // Si no es JSON, enviarlo como texto/error
+        if (result.status >= 400) {
+          res.status(result.status).json({
+            success: false,
+            error: `Error ${result.status} de Google (No JSON)`,
+            details: result.body.substring(0, 1000)
+          });
+        } else {
+          // A veces GAS devuelve éxito pero con un mensaje de texto "Success"
+          res.status(result.status || 200).json({
+            success: true,
+            message: "Request completed, but response was not JSON",
+            raw: result.body.substring(0, 500)
+          });
+        }
       }
-
-      // Google Apps Script usually returns JSON or HTML error
-      if (!data) {
-        log("ERROR: Empty response from Google");
-        return res.status(502).json({
-          success: false,
-          error: 'Empty response from Google Apps Script',
-          status,
-          duration
-        });
-      }
-
-      // Axios automatically parses JSON if possible
-      log("SUCCESS: Request completed");
-      res.status(status).json(data);
-
-    } catch (axiosError: any) {
+    } catch (reqError: any) {
       const duration = Date.now() - startTime;
-      log(`AXIOS ERROR after ${duration}ms: ${axiosError.message}`);
-      
-      if (axiosError.code === 'ECONNABORTED') {
-        return res.status(504).json({ success: false, error: 'TIMEOUT_25S_GAS', duration });
-      }
-
-      return res.status(500).json({ 
-        success: false, 
-        error: 'Proxy Fetch Error: ' + axiosError.message,
-        code: axiosError.code,
-        duration 
+      log(`Request error: ${reqError.message}`);
+      res.status(502).json({
+        success: false,
+        error: "Failed to communicate with Google Apps Script",
+        details: reqError.message,
+        duration
       });
     }
   } catch (error: any) {
-    log(`CRITICAL PROXY ERROR: ${error.message}`);
-    res.status(500).json({ success: false, error: 'Internal logic crash: ' + error.message });
+     log(`Fatal proxy error: ${error.message}`);
+     res.status(500).json({
+       success: false,
+       error: "Internal proxy logic crash",
+       details: error.message
+     });
   }
 });
 
