@@ -189,10 +189,9 @@ export default function App() {
     anomalias_obs: '',
   });
 
-  const [photos, setPhotos] = useState<{ check: string, etiqueta: string, grupo: string }>({
+  const [photos, setPhotos] = useState<{ check: string, etiqueta: string }>({
     check: '',
     etiqueta: '',
-    grupo: '',
   });
 
   const [signature, setSignature] = useState('');
@@ -341,7 +340,7 @@ export default function App() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!photos.check || !photos.etiqueta || !photos.grupo || !signature) {
+    if (!photos.check || !photos.etiqueta || !signature) {
       alert('Debe completar todas las fotos y la firma antes de enviar.');
       return;
     }
@@ -415,13 +414,11 @@ export default function App() {
           // Media (Files)
           fotos: {
             check: cleanB64(photos.check),
-            etiqueta: cleanB64(photos.etiqueta),
-            grupo: cleanB64(photos.grupo)
+            etiqueta: cleanB64(photos.etiqueta)
           },
           // Flat mapping for photos if needed
           foto_visto_bueno: cleanB64(photos.check),
           foto_etiqueta: cleanB64(photos.etiqueta),
-          foto_grupo: cleanB64(photos.grupo),
           
           firma_base64: cleanB64(signature),
           pdf_base64: cleanB64(pdfDataUri),
@@ -471,7 +468,7 @@ export default function App() {
       
       alert('¡TRABAJO GUARDADO EXITOSAMENTE!\nLos datos y el PDF están en la hoja de control.');
       setView('dashboard');
-      setPhotos({ check: '', etiqueta: '', grupo: '' });
+      setPhotos({ check: '', etiqueta: '' });
       setSignature('');
       generateNewIDs();
     } catch (err: any) {
@@ -765,8 +762,8 @@ export default function App() {
                 </div>
                 <div className="p-4 flex-1 flex flex-col space-y-4">
                   {/* PHOTOS */}
-                  <div className="grid grid-cols-3 gap-2">
-                    {(['check', 'etiqueta', 'grupo'] as const).map((key) => (
+                  <div className="grid grid-cols-2 gap-2">
+                    {(['check', 'etiqueta'] as const).map((key) => (
                       <div key={key} className="relative aspect-square bg-white border border-brand-dark flex flex-col items-center justify-center p-2 group hover:bg-brand-gray cursor-pointer">
                         {photos[key] ? (
                           <>
@@ -776,7 +773,7 @@ export default function App() {
                         ) : (
                           <>
                             <Camera className="w-5 h-5 mb-1 opacity-40 shrink-0" />
-                            <span className="text-[8px] font-bold uppercase text-center">{key === 'check' ? 'VISTO BUENO' : key === 'etiqueta' ? 'ETIQUETA' : 'GRUPO'}</span>
+                            <span className="text-[8px] font-bold uppercase text-center">{key === 'check' ? 'VISTO BUENO' : 'ETIQUETA'}</span>
                           </>
                         )}
                         <input 
@@ -922,10 +919,9 @@ export default function App() {
 
         <div style={{ marginBottom: '30px' }}>
            <h3 style={{ borderBottom: '2px solid #8CC63F', paddingBottom: '5px', fontSize: '12px', color: '#0071BC' }}>EVIDENCIA FOTOGRÁFICA</h3>
-           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
               {photos.check && <div style={{ border: '1px solid #141414', padding: '2px' }}><img src={photos.check} style={{ width: '100%' }} /><p style={{ fontSize: '8px', textAlign: 'center', margin: '2px' }}>VISTO BUENO</p></div>}
               {photos.etiqueta && <div style={{ border: '1px solid #141414', padding: '2px' }}><img src={photos.etiqueta} style={{ width: '100%' }} /><p style={{ fontSize: '8px', textAlign: 'center', margin: '2px' }}>ETIQUETA</p></div>}
-              {photos.grupo && <div style={{ border: '1px solid #141414', padding: '2px' }}><img src={photos.grupo} style={{ width: '100%' }} /><p style={{ fontSize: '8px', textAlign: 'center', margin: '2px' }}>GRUPO/LOTE</p></div>}
            </div>
         </div>
 
