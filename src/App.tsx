@@ -15,8 +15,6 @@ import {
   FileDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import { QRCodeSVG } from 'qrcode.react';
 
 // --- CONFIGURATION & CONSTANTS ---
@@ -299,29 +297,6 @@ export default function App() {
     }
   };
 
-  const generatePDFBase64 = async () => {
-    const pdfElement = document.getElementById('pdf-template');
-    if (!pdfElement) return null;
-    
-    // Pequeña pausa extra para renderizado final
-    await new Promise(r => setTimeout(r, 600));
-
-    const canvas = await html2canvas(pdfElement, { 
-      scale: 1.2, 
-      logging: false, 
-      useCORS: true,
-      allowTaint: true,
-      backgroundColor: '#ffffff'
-    });
-
-    const imgData = canvas.toDataURL('image/jpeg', 0.8);
-    const pdf = new jsPDF('p', 'mm', 'letter');
-    const width = pdf.internal.pageSize.getWidth();
-    const height = (canvas.height * width) / canvas.width;
-    pdf.addImage(imgData, 'JPEG', 0, 0, width, height);
-    return pdf.output('datauristring');
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!photos.check || !photos.etiqueta || !signature) {
@@ -335,13 +310,6 @@ export default function App() {
     try {
       console.log('--- Iniciando Proceso de Guardado ---');
       
-      console.log('1. Generando PDF...');
-      const pdfDataUri = await generatePDFBase64();
-      if (!pdfDataUri) {
-        throw new Error('Fallo crítico: No se pudo generar el contenido visual del PDF.');
-      }
-      console.log('PDF generado exitosamente');
-
       // Helper to strip data:image/...;base64,
       const cleanB64 = (uri: string) => uri.includes(',') ? uri.split(',')[1] : uri;
 
@@ -405,7 +373,6 @@ export default function App() {
           foto_etiqueta: cleanB64(photos.etiqueta),
           
           firma_base64: cleanB64(signature),
-          pdf_base64: cleanB64(pdfDataUri),
           
           // Drive Config
           driveFolderId: '169xhiKRk2sZ7SJLrzc4lROU40SDolKqJ',
@@ -413,16 +380,7 @@ export default function App() {
         }
       };
 
-      // Pre-check payload size for Vercel (4.5MB limit)
-      const payloadString = JSON.stringify(payload);
-      const payloadSizeMB = (payloadString.length * 0.75) / (1024 * 1024); // Rough approx of binary size
-      console.log(`Payload Size: ~${payloadSizeMB.toFixed(2)} MB`);
-      
-      if (payloadSizeMB > 4.3) {
-        throw new Error(`El paquete de datos es muy grande (${payloadSizeMB.toFixed(2)}MB). Intenta tomar fotos con menos detalle o menos luz. (Límite Vercel: 4.5MB)`);
-      }
-
-      console.log('2. Enviando a la API Proxy /api/save...');
+      console.log('1. Enviando a la API Proxy /api/save...');
       const response = await fetch('/api/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -460,7 +418,7 @@ export default function App() {
         throw new Error(resData.error || 'La API de Google Apps Script devolvió un error desconocido.');
       }
       
-      alert('¡TRABAJO GUARDADO EXITOSAMENTE!\nLos datos y el PDF están en la hoja de control.');
+      alert('¡TRABAJO GUARDADO EXITOSAMENTE!\nLos datos están en la hoja de control.');
       setView('dashboard');
       setPhotos({ check: '', etiqueta: '' });
       setSignature('');
@@ -786,7 +744,7 @@ export default function App() {
                   
                   {loading && (
                     <div className="p-4 bg-brand-orange text-white text-center font-bold text-[10px] animate-pulse uppercase">
-                      GENERANDO PDF Y SINCRONIZANDO...
+                      SINCRONIZANDO DATOS...
                     </div>
                   )}
                 </div>
@@ -845,80 +803,12 @@ export default function App() {
                 className="px-6 py-2 bg-brand-green text-white font-bold text-xs uppercase tracking-tighter hover:bg-brand-blue transition-colors flex items-center gap-2"
               >
                 {loading ? <Loader2 className="w-3 h-3 animate-spin"/> : <CheckCircle2 className="w-3 h-3"/>}
-                PDF Y SINCRONIZAR
+                SINCRONIZAR DATOS
               </button>
           )}
         </div>
       </footer>
 
-      {/* --- PDF TEMPLATE (Hidden but in DOM) --- */}
-      <div 
-        id="pdf-template" 
-        style={{ 
-          position: 'absolute', 
-          left: '-9999px', 
-          top: '0', 
-          width: '800px', 
-          padding: '40px', 
-          backgroundColor: '#fff', 
-          color: '#000', 
-          fontFamily: 'Arial, sans-serif' 
-        }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '30px' }}>
-          <div style={{ textAlign: 'right' }}>
-            <h1 style={{ margin: 0, color: '#8CC63F', fontSize: '24px' }}>ACTA DE RECOLECCIÓN</h1>
-            <p style={{ margin: 0, fontWeight: 'bold' }}>CERT: #{formData.no_reg}</p>
-            <p style={{ margin: 0, fontSize: '10px', color: '#666' }}>{new Date().toLocaleString()}</p>
-          </div>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '30px' }}>
-          <div style={{ border: '1px solid #8CC63F', padding: '15px' }}>
-            <h3 style={{ backgroundColor: '#8CC63F', color: '#fff', padding: '5px 10px', marginTop: 0, fontSize: '12px' }}>DATOS DEL CLIENTE</h3>
-            <p style={{ fontSize: '12px' }}><strong>CLIENTE:</strong> {formData.nombre_cliente}</p>
-            <p style={{ fontSize: '12px' }}><strong>NO. TONEL:</strong> {formData.no_tonel}</p>
-            <p style={{ fontSize: '12px' }}><strong>GRUPO:</strong> {formData.grupo}</p>
-          </div>
-          <div style={{ border: '1px solid #8CC63F', padding: '15px' }}>
-            <h3 style={{ backgroundColor: '#8CC63F', color: '#fff', padding: '5px 10px', marginTop: 0, fontSize: '12px' }}>DETALLE TÉCNICO</h3>
-            <p style={{ fontSize: '12px' }}><strong>PRODUCTO:</strong> {formData.producto_componente}</p>
-            <p style={{ fontSize: '12px' }}><strong>ESTADO:</strong> {formData.estado_recipiente}</p>
-            <p style={{ fontSize: '12px' }}><strong>PROCESO:</strong> {formData.proceso_disposicion}</p>
-            <p style={{ fontSize: '12px' }}><strong>VOLUMEN:</strong> {formData.porc_vol_aprox}% ({formData.galones_aprox} Gal)</p>
-          </div>
-        </div>
-
-        <div style={{ marginBottom: '30px' }}>
-           <h3 style={{ borderBottom: '2px solid #8CC63F', paddingBottom: '5px', fontSize: '12px', color: '#0071BC' }}>EVIDENCIA FOTOGRÁFICA</h3>
-           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
-              {photos.check && <div style={{ border: '1px solid #141414', padding: '2px' }}><img src={photos.check} style={{ width: '100%' }} /><p style={{ fontSize: '8px', textAlign: 'center', margin: '2px' }}>VISTO BUENO</p></div>}
-              {photos.etiqueta && <div style={{ border: '1px solid #141414', padding: '2px' }}><img src={photos.etiqueta} style={{ width: '100%' }} /><p style={{ fontSize: '8px', textAlign: 'center', margin: '2px' }}>ETIQUETA</p></div>}
-           </div>
-        </div>
-
-        <div style={{ marginBottom: '30px' }}>
-          <h3 style={{ borderBottom: '2px solid #8CC63F', paddingBottom: '5px', fontSize: '12px', color: '#0071BC' }}>OBSERVACIONES DEL OPERADOR</h3>
-          <p style={{ minHeight: '60px', border: '1px solid #eee', padding: '10px', fontSize: '11px', fontStyle: 'italic' }}>{formData.anomalias_obs || 'N/A'}</p>
-        </div>
-
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '50px' }}>
-          <div style={{ textAlign: 'center' }}>
-             {signature && <img src={signature} style={{ width: '180px', borderBottom: '2px solid #0071BC' }} />}
-             <p style={{ margin: 0, fontWeight: 'bold', fontSize: '12px', color: '#0071BC' }}>{user?.user.toUpperCase()}</p>
-             <p style={{ margin: 0, fontSize: '9px', opacity: 0.6 }}>Firma del Operador</p>
-          </div>
-          <div style={{ textAlign: 'right' }}>
-            <QRCodeSVG value={`https://biotrash.net/validate?id=${formData.no_reg}`} size={80} />
-            <p style={{ fontSize: '7px', color: '#888', marginTop: '5px' }}>PROTOCOLO DE VALIDACIÓN REQ.</p>
-          </div>
-        </div>
-
-        <div style={{ marginTop: '30px', fontSize: '8px', color: '#aaa', borderTop: '1px solid #eee', paddingTop: '10px', fontFamily: 'monospace' }}>
-           LOC: {location.lat}, {location.lng} | PREC: {location.accuracy}M | APP_HASH: {Math.random().toString(16).substring(2, 8)}<br/>
-           BIOTRASH S.A. © 2026 - REGISTRO DE GESTIÓN DE RESIDUOS PELIGROSOS
-        </div>
-      </div>
     </div>
   );
 }
