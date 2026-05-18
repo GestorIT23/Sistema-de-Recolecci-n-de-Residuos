@@ -47,7 +47,7 @@ const ROLES = {
   }
 };
 
-const LOGO_URL = 'https://i.ibb.co/vzrQ6vW/logo-biotrash.png';
+const LOGO_URL = '/api/logo-proxy';
 
 // --- TYPES ---
 interface LocationData {
@@ -879,13 +879,18 @@ export default function App() {
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
           <img 
-            src={LOGO_URL} 
+            src={logoLoaded ? LOGO_URL : '/api/logo-proxy'} 
             crossOrigin="anonymous" 
             alt="Biotrash Logo" 
             style={{ height: '60px', objectFit: 'contain' }} 
             onLoad={() => {
               console.log('Logo loaded for PDF');
               setLogoLoaded(true);
+            }}
+            onError={(e) => {
+              console.error('Logo failed to load for PDF');
+              // Fallback to text if image fails
+              setLogoLoaded(true); 
             }}
           />
           <div style={{ textAlign: 'right' }}>
