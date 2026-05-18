@@ -430,7 +430,14 @@ export default function App() {
       });
       
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+        let errorData: any = {};
+        const responseText = await response.text();
+        try {
+          errorData = JSON.parse(responseText);
+        } catch (e) {
+          errorData = { error: 'Respuesta no válida del servidor (no es JSON)', rawBody: responseText };
+        }
+
         const status = response.status;
         console.error('FULL ERROR DATA:', errorData);
         
