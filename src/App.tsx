@@ -593,7 +593,7 @@ export default function App() {
                 </div>
                 <div className="p-4 border-t border-brand-dark flex flex-col items-center">
                   <QRCodeSVG value={`https://biotrash.net/validate?id=${formData.no_reg}`} size={80} className="opacity-40 mix-blend-multiply" />
-                   <p className="text-[9px] mt-2 opacity-50 uppercase tracking-widest text-center">QR del PDF en Vivo</p>
+                   <p className="text-[9px] mt-2 opacity-50 uppercase tracking-widest text-center">Código de Validación QR</p>
                 </div>
               </section>
 
