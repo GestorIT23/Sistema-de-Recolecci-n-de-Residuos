@@ -22,7 +22,7 @@ import { QRCodeSVG } from 'qrcode.react';
 // --- CONFIGURATION & CONSTANTS ---
 const API_CONFIG = {
   // Replace this with your Google Apps Script Web App URL after deployment
-  URL: 'https://script.google.com/macros/s/AKfycbwk1Mt8CXpH1BhgTIbXsD6ikH_9B0c2swZlHC2qbDL2kkB8waU0Jo4eJT4cXJ0yvJOoNw/exec',
+  URL: 'https://script.google.com/macros/s/AKfycbxNeJbViiUIe56V9X2dHl_d9h4V70PgE7Rmq-3D8jprKLcSkFmPxL68xyhI-i60D1gUqA/exec',
   TOKEN: 'BIOTRASH_TOKEN_2024_SECURE'
 };
 
@@ -448,13 +448,16 @@ export default function App() {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         const status = response.status;
-        console.error('Error Response:', errorData);
+        console.error('FULL ERROR DATA:', errorData);
         
-        let msg = `Error del servidor (${status})`;
-        if (errorData.error) msg += `: ${errorData.error}`;
+        let msg = `Error ${status}: `;
+        if (errorData.error) msg += errorData.error;
+        else if (errorData.message) msg += errorData.message;
+        else msg += "Error desconocido del servidor.";
+        
         if (errorData.details) msg += `\nDetalles: ${errorData.details}`;
-        if (errorData.rawBody) msg += `\nRespuesta Google: ${errorData.rawBody.substring(0, 200)}`;
-        if (errorData.duration) msg += `\nDuración: ${errorData.duration}ms`;
+        if (errorData.rawBody) msg += `\nCuerpo: ${errorData.rawBody.substring(0, 150)}`;
+        if (errorData.diagnostic) msg += `\nDiagnóstico: ${JSON.stringify(errorData.diagnostic)}`;
         
         throw new Error(msg);
       }

@@ -5,6 +5,12 @@ import router from "./src/api";
 const app = express();
 app.use(express.json({ limit: '10mb' }));
 
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`[SERVER] ${req.method} ${req.url}`);
+  next();
+});
+
 // Use the same API router
 app.use("/api", router);
 

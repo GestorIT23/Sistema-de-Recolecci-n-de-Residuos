@@ -1,9 +1,17 @@
 import express from "express";
+import { Buffer } from "node:buffer";
 
 const router = express.Router();
 
+// Helper to log with timestamp
+const log = (msg: string, data?: any) => {
+  const time = new Date().toISOString().substring(11, 19);
+  console.log(`[API ${time}] ${msg}`, data || '');
+};
+
 // Proxy logo to avoid CORS
 router.get("/logo-proxy", async (req, res) => {
+  log("GET /logo-proxy");
   const fallbackUrls = [
     'https://i.ibb.co/vzrQ6vW/logo-biotrash.png',
     'https://i.postimg.cc/mD8D9h6V/logo-biotrash.png',
@@ -14,38 +22,56 @@ router.get("/logo-proxy", async (req, res) => {
   for (const url of fallbackUrls) {
     try {
       const controller = new AbortController();
-      const id = setTimeout(() => controller.abort(), 5000);
+      const id = setTimeout(() => controller.abort(), 6000);
       const response = await fetch(url, { 
         signal: controller.signal,
-        headers: { 'User-Agent': 'Mozilla/5.0' }
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
       });
       clearTimeout(id);
 
       if (response.ok) {
-        const buffer = await response.arrayBuffer();
+        const arrayBuffer = await response.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
         res.set("Content-Type", "image/png");
         res.set("Cache-Control", "public, max-age=86400");
         res.set("Access-Control-Allow-Origin", "*");
-        return res.send(Buffer.from(buffer));
+        log(`✓ Logo loaded from ${url}`);
+        return res.send(buffer);
       } else {
         diagnostic.push({ url, status: response.status });
+        log(`✗ URL ${url} returned ${response.status}`);
       }
     } catch (error: any) {
       diagnostic.push({ url, error: error.message });
+      log(`! Error fetching ${url}: ${error.message}`);
     }
   }
-  console.error('Logo Proxy failure:', diagnostic);
-  res.status(502).json({ error: 'Logo not found', diagnostic });
+  
+  log("FAILED to proxy logo after all attempts", diagnostic);
+  res.status(502).json({ 
+    success: false, 
+    error: 'Logo could not be retrieved from any source', 
+    diagnostic 
+  });
 });
 
 // Health check
 router.get("/health", (req, res) => {
-  res.json({ status: "ok", vercel: !!process.env.VERCEL, node: process.version });
+  log("GET /health");
+  res.json({ 
+    status: "ok", 
+    vercel: !!process.env.VERCEL, 
+    node: process.version,
+    env: process.env.NODE_ENV,
+    timestamp: new Date().toISOString()
+  });
 });
 
 // API Proxy to Google Apps Script
 router.post("/save", async (req, res) => {
   const startTime = Date.now();
+  log("POST /save - Started");
+  
   try {
     const GAS_URL = process.env.GAS_WEBAPP_URL || 'https://script.google.com/macros/s/AKfycbwk1Mt8CXpH1BhgTIbXsD6ikH_9B0c2swZlHC2qbDL2kkB8waU0Jo4eJT4cXJ0yvJOoNw/exec';
     
@@ -55,23 +81,27 @@ router.post("/save", async (req, res) => {
     }
 
     const bodyStr = JSON.stringify(req.body);
-    const sizeMB = bodyStr.length / (1024 * 1024);
+    const sizeBytes = bodyStr.length;
+    const sizeMB = sizeBytes / (1024 * 1024);
     
+    log(`Payload size: ${sizeMB.toFixed(2)} MB`);
+
     if (sizeMB > 4.4) {
-      return res.status(413).json({ success: false, error: 'Payload too large (>4.5MB)' });
+      log("ABORT: Payload too large for Vercel/Proxy limit");
+      return res.status(413).json({ success: false, error: 'Payload size exceeds 4.5MB limit.' });
     }
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 9500); // Increased a bit
+    const timeoutId = setTimeout(() => controller.abort(), 20000); // Increased significantly to avoid early cuts
 
     try {
-      console.log(`Sending to GAS: ${finalUrl.substring(0, 50)}...`);
+      log(`Forwarding to Google: ${finalUrl.substring(0, 60)}...`);
       const response = await fetch(finalUrl, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          'User-Agent': 'Mozilla/5.0 (Vercel Serverless)'
+          'User-Agent': 'Mozilla/5.0 (AI-Studio-Proxy)'
         },
         body: bodyStr,
         redirect: 'follow',
@@ -83,12 +113,18 @@ router.post("/save", async (req, res) => {
       const responseText = await response.text();
       const duration = Date.now() - startTime;
       
-      console.log(`GAS Response: ${status} in ${duration}ms, body length: ${responseText.length}`);
+      log(`GAS Response: ${status} in ${duration}ms, body length: ${responseText.length}`);
+
+      // Handle Redirects manually if needed (though redirect: 'follow' should work)
+      if (status === 301 || status === 302) {
+        log("Google requested a redirect that wasn't followed automatically?");
+      }
 
       if (!response.ok && status !== 302 && status !== 301) {
+        log(`ERROR: Google returned ${status}`);
         return res.status(status).json({
           success: false,
-          error: `Google returned error status ${status}`,
+          error: `Google Apps Script returned status ${status}`,
           details: responseText.substring(0, 500) || 'No response body',
           duration,
           headers: Object.fromEntries(response.headers.entries())
@@ -96,45 +132,48 @@ router.post("/save", async (req, res) => {
       }
 
       if (!responseText || responseText.trim() === '') {
+        log("ERROR: Empty response from Google");
         return res.status(502).json({
           success: false,
-          error: 'Google returned an empty response. Ensure the GAS script uses ContentService to return data.',
+          error: 'Google returned an empty body. Check your .gs code.',
           status,
-          duration,
-          headers: Object.fromEntries(response.headers.entries())
+          duration
         });
       }
 
       try {
         const result = JSON.parse(responseText);
+        log("SUCCESS: Data saved successfully");
         res.json(result);
       } catch (e) {
-        // If it's not JSON, it might be an HTML error page from Google
-        let errorMessage = 'Invalid JSON from Google';
+        log("ERROR: Invalid JSON from Google", responseText.substring(0, 100));
+        let errorMessage = 'The response from Google Apps Script was not valid JSON.';
         if (responseText.includes('google-signin') || responseText.includes('login')) {
-          errorMessage = 'Google Apps Script requires authentication. Ensure it is deployed as "Anyone".';
-        } else if (responseText.includes('script-error')) {
-          errorMessage = 'Google Apps Script encountered a script error.';
+          errorMessage = 'The script is restricted. Ensure "Execute as: Me" and "Who has access: Anyone".';
+        } else if (responseText.includes('script-error') || responseText.includes('Exception')) {
+          errorMessage = 'The Google Apps Script crashed during execution.';
         }
 
         res.status(502).json({ 
           success: false, 
           error: errorMessage, 
           status,
-          rawBody: responseText.substring(0, 1000), // Give more info
+          rawBody: responseText.substring(0, 1000),
           duration
         });
       }
     } catch (fetchError: any) {
       clearTimeout(timeoutId);
       const duration = Date.now() - startTime;
+      log(`FETCH ERROR after ${duration}ms: ${fetchError.message}`);
       if (fetchError.name === 'AbortError') {
-        return res.status(504).json({ success: false, error: 'TIMEOUT_9.5S', duration });
+        return res.status(504).json({ success: false, error: 'TIMEOUT_PROXIED_GAS_20S', duration });
       }
-      return res.status(500).json({ success: false, error: 'Fetch Error: ' + fetchError.message, duration });
+      return res.status(500).json({ success: false, error: 'Network Error: ' + fetchError.message, duration });
     }
   } catch (error: any) {
-    res.status(500).json({ success: false, error: 'Internal Server Error: ' + error.message });
+    log(`CRITICAL ERROR: ${error.message}`);
+    res.status(500).json({ success: false, error: 'Internal Proxy Error: ' + error.message });
   }
 });
 
