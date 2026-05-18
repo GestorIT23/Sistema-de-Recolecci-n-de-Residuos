@@ -22,7 +22,7 @@ import { QRCodeSVG } from 'qrcode.react';
 // --- CONFIGURATION & CONSTANTS ---
 const API_CONFIG = {
   // Replace this with your Google Apps Script Web App URL after deployment
-  URL: 'https://script.google.com/macros/s/AKfycbyVMJqsUrxLBnDoj-cXiSzmJe5zzEXWjrJOaRDJt0A5-IoImnDWmcGxmIvfN9kh8MP8/exec',
+  URL: 'https://script.google.com/macros/s/AKfycbwk1Mt8CXpH1BhgTIbXsD6ikH_9B0c2swZlHC2qbDL2kkB8waU0Jo4eJT4cXJ0yvJOoNw/exec',
   TOKEN: 'BIOTRASH_TOKEN_2024_SECURE'
 };
 
@@ -449,12 +449,16 @@ export default function App() {
       });
       
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Error Response:', errorText);
-        if (response.status === 413) {
-          throw new Error('El archivo es demasiado grande para ser enviado. Intenta tomar fotos con menor resolución.');
-        }
-        throw new Error(`Error del servidor (${response.status}): ${errorText.substring(0, 50)}...`);
+        const errorData = await response.json().catch(() => ({}));
+        const status = response.status;
+        console.error('Error Response:', errorData);
+        
+        let msg = `Error del servidor (${status})`;
+        if (errorData.error) msg += `: ${errorData.error}`;
+        if (errorData.details) msg += `\nDetalles: ${errorData.details}`;
+        if (errorData.duration) msg += `\nDuración: ${errorData.duration}ms`;
+        
+        throw new Error(msg);
       }
 
       const resData = await response.json();
@@ -879,18 +883,17 @@ export default function App() {
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
           <img 
-            src={logoLoaded ? LOGO_URL : '/api/logo-proxy'} 
+            src={LOGO_URL} 
             crossOrigin="anonymous" 
             alt="Biotrash Logo" 
             style={{ height: '60px', objectFit: 'contain' }} 
             onLoad={() => {
-              console.log('Logo loaded for PDF');
+              console.log('Logo proxy loaded for PDF');
               setLogoLoaded(true);
             }}
             onError={(e) => {
-              console.error('Logo failed to load for PDF');
-              // Fallback to text if image fails
-              setLogoLoaded(true); 
+              console.error('Logo failed to load from proxy');
+              setLogoLoaded(true); // Treat as loaded to continue
             }}
           />
           <div style={{ textAlign: 'right' }}>
