@@ -9,52 +9,6 @@ const log = (msg: string, data?: any) => {
   console.log(`[API ${time}] ${msg}`, data || '');
 };
 
-// Proxy logo to avoid CORS
-router.get("/logo-proxy", async (req, res) => {
-  log("GET /logo-proxy");
-  const fallbackUrls = [
-    'https://i.ibb.co/vzrQ6vW/logo-biotrash.png',
-    'https://i.postimg.cc/mD8D9h6V/logo-biotrash.png',
-    'https://biotrash.net/wp-content/uploads/2021/04/logo-biotrash.png'
-  ];
-  
-  const diagnostic: any[] = [];
-  for (const url of fallbackUrls) {
-    try {
-      const controller = new AbortController();
-      const id = setTimeout(() => controller.abort(), 6000);
-      const response = await fetch(url, { 
-        signal: controller.signal,
-        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
-      });
-      clearTimeout(id);
-
-      if (response.ok) {
-        const arrayBuffer = await response.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-        res.set("Content-Type", "image/png");
-        res.set("Cache-Control", "public, max-age=86400");
-        res.set("Access-Control-Allow-Origin", "*");
-        log(`✓ Logo loaded from ${url}`);
-        return res.send(buffer);
-      } else {
-        diagnostic.push({ url, status: response.status });
-        log(`✗ URL ${url} returned ${response.status}`);
-      }
-    } catch (error: any) {
-      diagnostic.push({ url, error: error.message });
-      log(`! Error fetching ${url}: ${error.message}`);
-    }
-  }
-  
-  log("FAILED to proxy logo after all attempts", diagnostic);
-  res.status(502).json({ 
-    success: false, 
-    error: 'Logo could not be retrieved from any source', 
-    diagnostic 
-  });
-});
-
 // Health check
 router.get("/health", (req, res) => {
   log("GET /health");

@@ -47,8 +47,6 @@ const ROLES = {
   }
 };
 
-const LOGO_URL = '/api/logo-proxy';
-
 // --- TYPES ---
 interface LocationData {
   lat: number | null;
@@ -255,8 +253,6 @@ export default function App() {
     setView('capture');
   };
 
-  const [logoLoaded, setLogoLoaded] = useState(false);
-
   const compressImage = (file: File, maxWidth = 800, quality = 0.35): Promise<string> => {
     return new Promise((resolve) => {
       const reader = new FileReader();
@@ -307,18 +303,6 @@ export default function App() {
     const pdfElement = document.getElementById('pdf-template');
     if (!pdfElement) return null;
     
-    // Asegurar que el logo esté cargado
-    const logoImg = pdfElement.querySelector('img');
-    if (logoImg && !logoImg.complete) {
-      console.log('Esperando carga de logo...');
-      await new Promise((resolve) => {
-        logoImg.onload = resolve;
-        logoImg.onerror = resolve;
-        // Si tarda demasiado, continuamos anyway
-        setTimeout(resolve, 3000);
-      });
-    }
-
     // Pequeña pausa extra para renderizado final
     await new Promise(r => setTimeout(r, 600));
 
@@ -500,7 +484,6 @@ export default function App() {
           className="w-full max-w-md bg-white border-2 border-brand-dark shadow-2xl overflow-hidden"
         >
           <div className="bg-brand-gray/50 p-8 border-b-2 border-brand-dark text-center">
-            <img src={LOGO_URL} alt="Biotrash" className="h-20 mx-auto mb-4 object-contain" />
             <h1 className="text-brand-dark text-lg font-bold tracking-tighter uppercase">SISTEMA DE CONTROL BIOTRASH</h1>
             <p className="text-[10px] text-brand-dark/50 font-mono uppercase tracking-widest">Captura de Campo v2.0.4</p>
           </div>
@@ -548,12 +531,6 @@ export default function App() {
       {/* HEADER BAR */}
       <header className="flex justify-between items-center bg-white border-b border-brand-dark px-6 py-3 shrink-0">
         <div className="flex items-center space-x-4">
-          <img 
-            src={LOGO_URL} 
-            alt="Biotrash" 
-            className="h-10 cursor-pointer object-contain" 
-            onClick={() => setView('dashboard')} 
-          />
           <div className="leading-none">
             <h1 className="text-lg font-bold tracking-tighter text-brand-dark">BIOTRASH CONTROL</h1>
             <p className="text-[10px] text-brand-dark/60 font-mono uppercase tracking-widest">Instancia Biotrash - Captura v2.0.4</p>
@@ -611,9 +588,8 @@ export default function App() {
               </div>
               
               <div className="hidden md:flex flex-col bg-brand-gray/20 p-12 items-center justify-center text-center">
-                <div className="p-8 border border-brand-dark border-dashed opacity-30 select-none">
-                  <img src={LOGO_URL} alt="Logo Background" className="h-24 grayscale opacity-30" />
-                  <p className="text-xs font-mono mt-4 uppercase text-brand-dark">ENLACE SEGURO BIOTRASH</p>
+                <div className="p-8 border border-brand-dark border-dashed opacity-30 select-none cursor-pointer" onClick={startCapture}>
+                  <p className="text-xs font-mono uppercase text-brand-dark">ENLACE SEGURO BIOTRASH</p>
                   <p className="text-[8px] font-mono mt-1 opacity-50 text-brand-dark">TXID: {Math.random().toString(16).substring(2, 12)}</p>
                 </div>
               </div>
@@ -882,21 +858,7 @@ export default function App() {
           fontFamily: 'Arial, sans-serif' 
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-          <img 
-            src={LOGO_URL} 
-            crossOrigin="anonymous" 
-            alt="Biotrash Logo" 
-            style={{ height: '60px', objectFit: 'contain' }} 
-            onLoad={() => {
-              console.log('Logo proxy loaded for PDF');
-              setLogoLoaded(true);
-            }}
-            onError={(e) => {
-              console.error('Logo failed to load from proxy');
-              setLogoLoaded(true); // Treat as loaded to continue
-            }}
-          />
+        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '30px' }}>
           <div style={{ textAlign: 'right' }}>
             <h1 style={{ margin: 0, color: '#8CC63F', fontSize: '24px' }}>ACTA DE RECOLECCIÓN</h1>
             <p style={{ margin: 0, fontWeight: 'bold' }}>CERT: #{formData.no_reg}</p>
