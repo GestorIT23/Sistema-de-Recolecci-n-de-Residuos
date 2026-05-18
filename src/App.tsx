@@ -306,14 +306,12 @@ export default function App() {
     const pdfElement = document.getElementById('pdf-template');
     if (!pdfElement) return null;
     
-    pdfElement.style.display = 'block';
     const canvas = await html2canvas(pdfElement, { 
       scale: 2, 
       logging: false, 
       useCORS: true,
       backgroundColor: '#ffffff'
     });
-    pdfElement.style.display = 'none';
 
     const imgData = canvas.toDataURL('image/jpeg', 0.8);
     const pdf = new jsPDF('p', 'mm', 'letter');
@@ -423,12 +421,14 @@ export default function App() {
         body: JSON.stringify(payload)
       });
       
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Error Response:', errorText);
+        throw new Error(`Error del servidor (${response.status}): ${errorText.substring(0, 50)}...`);
+      }
+
       const resData = await response.json();
       console.log('3. Respuesta recibida:', resData);
-
-      if (!response.ok) {
-        throw new Error(`Error del servidor: ${response.status} ${response.statusText}`);
-      }
 
       if (!resData.success) {
         throw new Error(resData.error || 'La API de Google Apps Script devolvió un error desconocido.');
@@ -833,13 +833,28 @@ export default function App() {
         </div>
       </footer>
 
-      {/* --- PDF TEMPLATE (Hidden) --- */}
+      {/* --- PDF TEMPLATE (Hidden but in DOM) --- */}
       <div 
         id="pdf-template" 
-        style={{ display: 'none', width: '800px', padding: '40px', backgroundColor: '#fff', color: '#000', fontFamily: 'Arial, sans-serif' }}
+        style={{ 
+          position: 'absolute', 
+          left: '-9999px', 
+          top: '0', 
+          width: '800px', 
+          padding: '40px', 
+          backgroundColor: '#fff', 
+          color: '#000', 
+          fontFamily: 'Arial, sans-serif' 
+        }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-          <img src={LOGO_URL} crossOrigin="anonymous" alt="Biotrash Logo" style={{ height: '60px', objectFit: 'contain' }} />
+          <img 
+            src={LOGO_URL} 
+            crossOrigin="anonymous" 
+            alt="Biotrash Logo" 
+            style={{ height: '60px', objectFit: 'contain' }} 
+            onLoad={() => console.log('Logo loaded for PDF')}
+          />
           <div style={{ textAlign: 'right' }}>
             <h1 style={{ margin: 0, color: '#8CC63F', fontSize: '24px' }}>ACTA DE RECOLECCIÓN</h1>
             <p style={{ margin: 0, fontWeight: 'bold' }}>CERT: #{formData.no_reg}</p>

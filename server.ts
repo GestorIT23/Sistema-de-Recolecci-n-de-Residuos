@@ -2,16 +2,15 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 
-async function startServer() {
-  const app = express();
-  const PORT = 3000;
+const app = express();
 
+async function configureApp() {
   app.use(express.json({ limit: '100mb' }));
 
   // API Proxy to Google Apps Script (to avoid CORS and opaque responses)
   app.post("/api/save", async (req, res) => {
     try {
-      const GAS_URL = process.env.GAS_WEBAPP_URL || 'https://script.google.com/macros/s/AKfycbz1pSqNHxiiVHGfSPEidCbGn_24YU1MSmxv5jjTaHu0GD5WiVosZJ9qntr8jH2twnND5g/exec';
+      const GAS_URL = process.env.GAS_WEBAPP_URL || 'https://script.google.com/macros/s/AKfycby41-qUvWKpTSh2AzPHRtcCggDNINs8LGSbUJ4zdo-Z4KkM-tWPjzN_gML9GnUHjUXFgQ/exec';
       
       // If the URL in env is the Vercel one or the placeholder, use the user's provided Google URL
       let finalUrl = GAS_URL;
@@ -68,10 +67,19 @@ async function startServer() {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
-
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-  });
 }
 
-startServer();
+// Start server if this file is run directly (not via Vercel)
+if (process.env.NODE_ENV !== "production" || !process.env.VERCEL) {
+  configureApp().then(() => {
+    const PORT = 3000;
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`Server running on http://localhost:${PORT}`);
+    });
+  });
+} else {
+  // En Vercel simplemente exportamos la app configurada
+  configureApp();
+}
+
+export default app;

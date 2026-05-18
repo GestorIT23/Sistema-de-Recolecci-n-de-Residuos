@@ -126,9 +126,16 @@ function guardarRegistro(reg) {
       reg.token || ''                       // TOKEN_VALIDATION
     ];
     
-    console.log('Intentando appendRow...');
-    sheet.appendRow(row);
-    console.log('AppendRow exitoso.');
+    console.log('Intentando appendRow con ' + row.length + ' columnas...');
+    try {
+      sheet.appendRow(row);
+      console.log('AppendRow exitoso. Nueva última fila: ' + sheet.getLastRow());
+    } catch (appendError) {
+      console.error('Error en appendRow, intentando setValues manual: ' + appendError.toString());
+      const nextRow = sheet.getLastRow() + 1;
+      sheet.getRange(nextRow, 1, 1, row.length).setValues([row]);
+      console.log('SetValues manual exitoso en fila ' + nextRow);
+    }
 
     return createResponse({ 
       success: true, 
