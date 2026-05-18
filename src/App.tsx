@@ -256,7 +256,7 @@ export default function App() {
     setView('capture');
   };
 
-  const compressImage = (file: File, maxWidth = 1200, quality = 0.7): Promise<string> => {
+  const compressImage = (file: File, maxWidth = 1024, quality = 0.5): Promise<string> => {
     return new Promise((resolve) => {
       const reader = new FileReader();
       reader.readAsDataURL(file);
@@ -307,7 +307,7 @@ export default function App() {
     if (!pdfElement) return null;
     
     const canvas = await html2canvas(pdfElement, { 
-      scale: 2, 
+      scale: 1.5, 
       logging: false, 
       useCORS: true,
       backgroundColor: '#ffffff'
@@ -413,6 +413,15 @@ export default function App() {
           token: API_CONFIG.TOKEN
         }
       };
+
+      // Pre-check payload size for Vercel (4.5MB limit)
+      const payloadString = JSON.stringify(payload);
+      const payloadSizeMB = (payloadString.length * 0.75) / (1024 * 1024); // Rough approx of binary size
+      console.log(`Payload Size: ~${payloadSizeMB.toFixed(2)} MB`);
+      
+      if (payloadSizeMB > 4.3) {
+        throw new Error(`El paquete de datos es muy grande (${payloadSizeMB.toFixed(2)}MB). Intenta tomar fotos con menos detalle o menos luz. (Límite Vercel: 4.5MB)`);
+      }
 
       console.log('2. Enviando a la API Proxy /api/save...');
       const response = await fetch('/api/save', {
