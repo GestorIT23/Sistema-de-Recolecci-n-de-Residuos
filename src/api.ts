@@ -9,7 +9,16 @@ const log = (msg: string, data?: any) => {
 };
 
 router.get("/health", (req, res) => {
-  res.json({ status: "ok", timestamp: new Date().toISOString() });
+  res.json({ 
+    status: "ok", 
+    timestamp: new Date().toISOString(),
+    vercel: !!process.env.VERCEL,
+    node: process.version
+  });
+});
+
+router.get("/test", (req, res) => {
+  res.json({ message: "Back-end is alive and reachable" });
 });
 
 router.post("/save", async (req, res) => {
@@ -46,7 +55,7 @@ router.post("/save", async (req, res) => {
         },
         maxContentLength: Infinity,
         maxBodyLength: Infinity,
-        timeout: 28000, 
+        timeout: 20000, // Reduced to 20s for Vercel
         validateStatus: () => true 
       });
 
