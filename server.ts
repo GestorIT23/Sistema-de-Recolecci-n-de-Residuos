@@ -16,17 +16,31 @@ app.post("/api/save", async (req, res) => {
       finalUrl = 'https://script.google.com/macros/s/AKfycby41-qUvWKpTSh2AzPHRtcCggDNINs8LGSbUJ4zdo-Z4KkM-tWPjzN_gML9GnUHjUXFgQ/exec';
     }
 
-    console.log('--- PROXY REQUEST ---');
+    const bodyStr = JSON.stringify(req.body);
+    const sizeMB = bodyStr.length / (1024 * 1024);
+    console.log(`--- PROXY REQUEST (Size: ${sizeMB.toFixed(2)} MB) ---`);
     console.log('Target URL:', finalUrl);
 
+    if (sizeMB > 4.4) {
+      return res.status(413).json({ 
+        success: false, 
+        error: `Payload too large (${sizeMB.toFixed(2)}MB). Limit is 4.5MB.` 
+      });
+    }
+
     console.log('2. Sending to GAS...');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 25000); // 25s timeout
+
     const response = await fetch(finalUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(req.body),
-      redirect: 'follow'
+      body: bodyStr,
+      redirect: 'follow',
+      signal: controller.signal
     });
     
+    clearTimeout(timeoutId);
     const responseText = await response.text();
     console.log('3. GAS Response received, status:', response.status);
 

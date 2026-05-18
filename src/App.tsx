@@ -256,7 +256,9 @@ export default function App() {
     setView('capture');
   };
 
-  const compressImage = (file: File, maxWidth = 1024, quality = 0.5): Promise<string> => {
+  const [logoLoaded, setLogoLoaded] = useState(false);
+
+  const compressImage = (file: File, maxWidth = 800, quality = 0.35): Promise<string> => {
     return new Promise((resolve) => {
       const reader = new FileReader();
       reader.readAsDataURL(file);
@@ -306,10 +308,26 @@ export default function App() {
     const pdfElement = document.getElementById('pdf-template');
     if (!pdfElement) return null;
     
+    // Asegurar que el logo esté cargado
+    const logoImg = pdfElement.querySelector('img');
+    if (logoImg && !logoImg.complete) {
+      console.log('Esperando carga de logo...');
+      await new Promise((resolve) => {
+        logoImg.onload = resolve;
+        logoImg.onerror = resolve;
+        // Si tarda demasiado, continuamos anyway
+        setTimeout(resolve, 3000);
+      });
+    }
+
+    // Pequeña pausa extra para renderizado final
+    await new Promise(r => setTimeout(r, 600));
+
     const canvas = await html2canvas(pdfElement, { 
-      scale: 1.5, 
+      scale: 1.2, 
       logging: false, 
       useCORS: true,
+      allowTaint: true,
       backgroundColor: '#ffffff'
     });
 
@@ -433,6 +451,9 @@ export default function App() {
       if (!response.ok) {
         const errorText = await response.text();
         console.error('Error Response:', errorText);
+        if (response.status === 413) {
+          throw new Error('El archivo es demasiado grande para ser enviado. Intenta tomar fotos con menor resolución.');
+        }
         throw new Error(`Error del servidor (${response.status}): ${errorText.substring(0, 50)}...`);
       }
 
@@ -862,7 +883,10 @@ export default function App() {
             crossOrigin="anonymous" 
             alt="Biotrash Logo" 
             style={{ height: '60px', objectFit: 'contain' }} 
-            onLoad={() => console.log('Logo loaded for PDF')}
+            onLoad={() => {
+              console.log('Logo loaded for PDF');
+              setLogoLoaded(true);
+            }}
           />
           <div style={{ textAlign: 'right' }}>
             <h1 style={{ margin: 0, color: '#8CC63F', fontSize: '24px' }}>ACTA DE RECOLECCIÓN</h1>
