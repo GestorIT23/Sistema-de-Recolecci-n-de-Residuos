@@ -22,8 +22,8 @@ import { QRCodeSVG } from 'qrcode.react';
 // --- CONFIGURATION & CONSTANTS ---
 const API_CONFIG = {
   // Replace this with your Google Apps Script Web App URL after deployment
-  URL: 'https://script.google.com/macros/s/AKfycbz_XXXXXXXXXXXX/exec', // USER MUST REPLACE THIS
-  TOKEN: 'biotrash_key_2026'
+  URL: 'https://script.google.com/macros/s/AKfycbyVMJqsUrxLBnDoj-cXiSzmJe5zzEXWjrJOaRDJt0A5-IoImnDWmcGxmIvfN9kh8MP8/exec',
+  TOKEN: 'BIOTRASH_TOKEN_2024_SECURE'
 };
 
 const ROLES = {
@@ -47,7 +47,7 @@ const ROLES = {
   }
 };
 
-const LOGO_URL = 'https://drive.google.com/thumbnail?id=1qHSIj7ONXw5S8j246GXZA2_fk46H3VGW&sz=w1000';
+const LOGO_URL = 'https://i.ibb.co/vzrQ6vW/logo-biotrash.png';
 
 // --- TYPES ---
 interface LocationData {
@@ -337,30 +337,82 @@ export default function App() {
       console.log('--- Iniciando Proceso de Guardado ---');
       
       console.log('1. Generando PDF...');
-      const pdfBase64 = await generatePDFBase64();
-      if (!pdfBase64) {
+      const pdfDataUri = await generatePDFBase64();
+      if (!pdfDataUri) {
         throw new Error('Fallo crítico: No se pudo generar el contenido visual del PDF.');
       }
-      console.log('PDF generado exitosamente (Base64 ready)');
+      console.log('PDF generado exitosamente');
+
+      // Helper to strip data:image/...;base64,
+      const cleanB64 = (uri: string) => uri.includes(',') ? uri.split(',')[1] : uri;
 
       const payload = {
         token: API_CONFIG.TOKEN,
         action: 'guardarRegistro',
         driveFolderId: '169xhiKRk2sZ7SJLrzc4lROU40SDolKqJ',
         registro: {
-          ...formData,
+          // IDs and Identification
+          no_reg: formData.no_reg,
+          cert: formData.no_reg,
+          id: formData.no_reg,
+          no_tonel: formData.no_tonel,
+          tonel: formData.no_tonel,
+          fecha: new Date().toISOString(),
+          fecha_local: new Date().toLocaleString(),
+          timestamp: new Date().toLocaleString(),
+          
+          // User Info
+          usuario: user?.user || 'anon',
+          usuario_rol: user?.label || 'Operador',
+          operador: user?.user || 'anon',
+
+          // Client and Product
+          nombre_cliente: formData.nombre_cliente,
+          cliente: formData.nombre_cliente,
+          producto: formData.producto_componente,
+          producto_componente: formData.producto_componente,
+          componente: formData.producto_componente,
+          grupo: formData.grupo,
+
+          // Technical Data
+          proceso_disposicion: formData.proceso_disposicion,
+          proceso: formData.proceso_disposicion,
+          disposicion: formData.proceso_disposicion,
+          estado_recipiente: formData.estado_recipiente,
+          estado: formData.estado_recipiente,
+          porc_vol_aprox: formData.porc_vol_aprox,
+          porcentaje: formData.porc_vol_aprox,
+          galones_aprox: formData.galones_aprox,
+          galones: formData.galones_aprox,
+          volumen_completo: `${formData.porc_vol_aprox}% (${formData.galones_aprox} Gal)`,
+          observaciones: formData.anomalias_obs,
+          anomalias_obs: formData.anomalias_obs,
+
+          // Location
           latitud: location.lat,
           longitud: location.lng,
           altitud: location.alt,
           precision_m: location.accuracy,
+          coordenadas: `${location.lat}, ${location.lng}`,
+          precision: `${location.accuracy}m`,
+
+          // Media (Files)
           fotos: {
-            check: photos.check,
-            etiqueta: photos.etiqueta,
-            grupo: photos.grupo
+            check: cleanB64(photos.check),
+            etiqueta: cleanB64(photos.etiqueta),
+            grupo: cleanB64(photos.grupo)
           },
-          firma_base64: signature,
-          pdf_base64: pdfBase64,
-          usuario_rol: user?.label || 'Operador'
+          // Flat mapping for photos if needed
+          foto_visto_bueno: cleanB64(photos.check),
+          foto_etiqueta: cleanB64(photos.etiqueta),
+          foto_grupo: cleanB64(photos.grupo),
+          
+          firma_base64: cleanB64(signature),
+          pdf_base64: cleanB64(pdfDataUri),
+          
+          // Drive Config
+          driveFolderId: '169xhiKRk2sZ7SJLrzc4lROU40SDolKqJ',
+          token: API_CONFIG.TOKEN
         }
       };
 
@@ -643,8 +695,8 @@ export default function App() {
                         <label className="tech-label">% Vol.</label>
                         <input 
                           type="number" className="tech-input text-brand-dark"
-                          value={formData.porc_vol_aprox}
-                          onChange={(e) => setFormData({...formData, porc_vol_aprox: parseInt(e.target.value)})}
+                          value={formData.porc_vol_aprox || ''}
+                          onChange={(e) => setFormData({...formData, porc_vol_aprox: parseInt(e.target.value) || 0})}
                         />
                       </div>
                       <div className="space-y-1">
@@ -787,7 +839,7 @@ export default function App() {
         style={{ display: 'none', width: '800px', padding: '40px', backgroundColor: '#fff', color: '#000', fontFamily: 'Arial, sans-serif' }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-          <img src={LOGO_URL} alt="Biotrash Logo" style={{ height: '60px', objectFit: 'contain' }} />
+          <img src={LOGO_URL} crossOrigin="anonymous" alt="Biotrash Logo" style={{ height: '60px', objectFit: 'contain' }} />
           <div style={{ textAlign: 'right' }}>
             <h1 style={{ margin: 0, color: '#8CC63F', fontSize: '24px' }}>ACTA DE RECOLECCIÓN</h1>
             <p style={{ margin: 0, fontWeight: 'bold' }}>CERT: #{formData.no_reg}</p>
